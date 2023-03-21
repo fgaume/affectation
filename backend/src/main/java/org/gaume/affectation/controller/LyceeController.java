@@ -16,9 +16,9 @@ public class LyceeController {
 
     /* @GetMapping(value = "/lycees/{collegeId}")
     public College getCollege(@PathVariable String collegeId) {
-        College college = new College("0750465Y", "LUCIE ET RAYMOND AUBRAC");
+        College adresse = new College("0750465Y", "LUCIE ET RAYMOND AUBRAC");
         collegeService.saveColleges();
-        return college;
+        return adresse;
     } */
 
     @GetMapping(value = "/lycees/import")

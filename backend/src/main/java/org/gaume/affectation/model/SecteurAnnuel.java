@@ -16,9 +16,9 @@ public class SecteurAnnuel {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private int annee = 2022;
+    private Integer annee = 2022;
 
-    private int secteur = 1;
+    private Integer secteur = 1;
 
     @ManyToOne
     private College college;

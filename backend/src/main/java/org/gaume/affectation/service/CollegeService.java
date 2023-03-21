@@ -1,59 +1,60 @@
 package org.gaume.affectation.service;
 
-import com.fasterxml.jackson.core.exc.StreamReadException;
-import com.fasterxml.jackson.databind.DatabindException;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import feign.Feign;
+import feign.jackson.JacksonDecoder;
+import feign.jackson.JacksonEncoder;
 import lombok.extern.slf4j.Slf4j;
 import org.gaume.affectation.model.College;
 import org.gaume.affectation.repo.CollegeRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.gaume.opendata.OpenDataClient;
+import org.gaume.opendata.annuaire.Annuaire;
+import org.gaume.opendata.annuaire.AnnuaireFields;
+import org.gaume.opendata.annuaire.CodeNatureEtablissement;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.Map;
-import java.util.Optional;
 
 @Service
 @Slf4j
 public class CollegeService {
+    private final OpenDataClient openDataClient = Feign.builder()
+            .encoder(new JacksonEncoder())
+            .decoder(new JacksonDecoder())
+            .target(OpenDataClient.class, "https://data.education.gouv.fr/api/records/1.0/search");
 
-    @Autowired
-    private CollegeRepository repository;
+    private final CollegeRepository collegeRepository;
 
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @Transactional
-    public void importAllColleges() {
-        objectMapper.configure(
-                DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        try {
-            URL url = new URL("file:fr-en-ips_colleges.json");
-            Map<String, String>[] data = objectMapper.readValue(url, Map[].class);
-            log.info(""+ data.length);
-            for (Map<String,String> collegeMap : data) {
-                String nom = collegeMap.get("nom_de_l_etablissment").replaceAll("COLLEGE ", "");
-                College college = new College(collegeMap.get("uai"), nom);
-                repository.save(college);
-            }
-
-        } catch (MalformedURLException e) {
-            throw new RuntimeException(e);
-        } catch (StreamReadException e) {
-            throw new RuntimeException(e);
-        } catch (DatabindException e) {
-            throw new RuntimeException(e);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-
+    public CollegeService(CollegeRepository collegeRepository) {
+        this.collegeRepository = collegeRepository;
     }
 
     @Transactional
+    public void importColleges() {
+
+        if (!collegeRepository.findAll().iterator().hasNext()) {
+            Annuaire annuaire = openDataClient.fetchAnnuaire(CodeNatureEtablissement.COLLEGE.getCode());
+            log.info("[Import OpenData Annuaire] : {} items", annuaire.nhits());
+            annuaire.records().forEach((item) -> {
+                AnnuaireFields data = item.fields();
+                College college = College.builder()
+                        .id(data.identifiantEtablissement())
+                        .nom(data.nomEtablissement())
+                        .adresse(data.adresse())
+                        .codePostal(data.codePostal())
+                        .latitude(data.latitude())
+                        .longitude(data.longitude())
+                        .coordonneeX(data.coordonneeX())
+                        .coordonneeY(data.coordonneeY())
+                        .build();
+                collegeRepository.save(college);
+            });
+        }
+        else {
+            log.warn("[Import OpenData Annuaire] : table non vide donc pas d'import");
+        }
+    }
+
+
+    /* @Transactional
     public void saveColleges() {
         // save a few customers
         //repository.save(new College("0750465Y", "LUCIE ET RAYMOND AUBRAC"));
@@ -62,25 +63,25 @@ public class CollegeService {
         // fetch all customers
         log.info("College found with findAll():");
         log.info("-------------------------------");
-        for (College customer : repository.findAll()) {
+        for (College customer : collegeRepository.findAll()) {
             log.info(customer.toString());
         }
         log.info("");
 
         // fetch an individual customer by ID
-        Optional<College> customer = repository.findById("0750465Y");
+        Optional<College> customer = collegeRepository.findById("0750465Y");
         if (customer.isPresent()) {
             log.info("Customer found with findById(\"0750465Y\"):");
             log.info("--------------------------------");
             log.info(customer.get().toString());
         }
 
-        Optional<College> college = repository.findByNom("WOLFGANG AMADEUS MOZART");
+        Optional<College> college = collegeRepository.findByNom("WOLFGANG AMADEUS MOZART");
         if (college.isPresent()) {
             log.info("Customer found with findByNom(\"WOLFGANG AMADEUS MOZART\"):");
             log.info("--------------------------------");
             log.info(college.get().toString());
         }
 
-    }
+    } */
 }

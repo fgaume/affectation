@@ -8,9 +8,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface CollegeAnnuelRepository extends CrudRepository<CollegeAnnuel, Long> {
-    //Optional<College> findByNom(String name);
-    //College findByUai(String uai);
     Optional<CollegeAnnuel> findByCollegeAndAnnee(College college, int annee);
 
-    List<CollegeAnnuel> findByAnneeAndBonus(int annee, int bonus);
+    List<CollegeAnnuel> findByAnneeAndIpsBonus(int annee, int ipsBonus);
 }

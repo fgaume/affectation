@@ -16,6 +16,7 @@
     </parent>
 
     <modules>
+        <module>opendata</module>
         <module>backend</module>
         <module>frontend</module>
     </modules>

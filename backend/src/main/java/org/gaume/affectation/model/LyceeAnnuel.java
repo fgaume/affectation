@@ -17,14 +17,15 @@ public class LyceeAnnuel {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private int effectif = 0;
-
-    private float ips = 0f;
-
-    private int annee = 2022;
-
-    private float scoreAdmission = 0f;
-
     @ManyToOne
     private Lycee lycee;
+
+    private Integer annee = 2022;
+
+    private Integer effectif = 0;
+
+    private Float ips = 0f;
+    
+    private Float scoreAdmission = 0f;
+
 }

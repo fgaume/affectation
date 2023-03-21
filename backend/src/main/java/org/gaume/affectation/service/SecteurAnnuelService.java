@@ -3,17 +3,15 @@ package org.gaume.affectation.service;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.gaume.affectation.io.AffelnetClient;
-import org.gaume.affectation.io.FeaturesItem;
-import org.gaume.affectation.io.Response;
-import org.gaume.affectation.model.*;
+import org.gaume.affectation.model.CollegeAnnuel;
+import org.gaume.affectation.model.Lycee;
+import org.gaume.affectation.model.LyceeAnnuel;
+import org.gaume.affectation.model.SecteurAnnuel;
 import org.gaume.affectation.repo.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import feign.Feign;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -42,7 +40,7 @@ public class SecteurAnnuelService {
     private ObjectMapper objectMapper;
 
     public int[] evaluerLyceesAccessibles(int annee, int bonus, float score) {
-        List<CollegeAnnuel> collegeAnnuels = collegeAnnuelRepository.findByAnneeAndBonus(annee, bonus);
+        List<CollegeAnnuel> collegeAnnuels = collegeAnnuelRepository.findByAnneeAndIpsBonus(annee, bonus);
         int[] distribution = new int[6];
         for (CollegeAnnuel collegeAnnuel : collegeAnnuels) {
             int lyceeAccessibles = 0;
@@ -75,26 +73,26 @@ public class SecteurAnnuelService {
     public void importSecteurs() {
         objectMapper.configure(
                 DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        try {
-            AffelnetClient secteurResource = Feign.builder()
-                    .target(AffelnetClient.class, "https://services9.arcgis.com");
+        /* try {
+            ArcgisClient secteurResource = Feign.builder()
+                    .target(ArcgisClient.class, "https://services9.arcgis.com");
             //Iterable<College> colleges = collegeRepository.findAll();
             List<College> colleges = new ArrayList<>();
             Optional<College> college1 = collegeRepository.findById("0750484U");
             colleges.add(college1.get());
             for (College college: colleges) {
-                log.info("traitement college : {}", college.getNom());
+                log.info("traitement adresse : {}", college.getNom());
                 String where = String.format(whereTemplate, college.getNom());
-                String response = secteurResource.getSecteurReponse(where);
+                String response = secteurResource.fetchSecteursAffelnet(where);
                 String reponse = response.replaceAll("UAI", "lyceeId");
                 Response rep = objectMapper.readValue(reponse, Response.class);
                 //log.info(rep.toString());
                 List<FeaturesItem> items = rep.getFeatures();
                 if (items.isEmpty()) {
-                    log.error("college absent : {} {}", college.getId(), college.getNom());
+                    log.error("adresse absent : {} {}", college.getId(), college.getNom());
                 }
                 else {
-                    //log.info("college present : " + college.getNom());
+                    //log.info("adresse present : " + adresse.getNom());
                     for(FeaturesItem item : items) {
                         int secteur = Integer.parseInt(item.getAttributes().getSecteur());
                         String lyceeId = item.getAttributes().getLyceeId();
@@ -107,7 +105,7 @@ public class SecteurAnnuelService {
                             secteurAnnuel.setCollege(college);
                             secteurAnnuel.setSecteur(secteur);
                             secteurAnnuel.setLycee(lycee);
-                            //log.info("saving secteur {}", secteurAnnuel);
+                            //log.info("saving arcgis {}", secteurAnnuel);
                             secteurAnnuelRepository.save(secteurAnnuel);
                         }
                         else {
@@ -115,12 +113,12 @@ public class SecteurAnnuelService {
                         }
                     }
                 }
-                log.info("traitement college : {} termine", college.getNom());
+                log.info("traitement adresse : {} termine", college.getNom());
 
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
-        }
+        } */
 
     }
 
