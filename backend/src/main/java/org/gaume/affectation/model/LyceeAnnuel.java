@@ -25,7 +25,7 @@ public class LyceeAnnuel {
     private Integer effectif = 0;
 
     private Float ips = 0f;
-    
+
     private Float scoreAdmission = 0f;
 
 }

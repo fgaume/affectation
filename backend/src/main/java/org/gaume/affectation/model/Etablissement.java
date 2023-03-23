@@ -19,13 +19,15 @@ import javax.validation.constraints.Size;
 @SuperBuilder
 public class Etablissement {
 
+    public enum TypeEtablissement {COLLEGE, LYCEE}
+
     @Id
     @Column(length = 8)
     @Size(min = 8, max = 8)
     private String id;
 
-    @Column(length = 64)
-    @Size(max = 64)
+    @Column(length = 128)
+    @Size(max = 128)
     private String nom;
 
     @Column(length = 64)
