@@ -1,43 +1,66 @@
 package org.gaume.affectation.service;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import feign.Feign;
+import feign.jackson.JacksonDecoder;
+import feign.jackson.JacksonEncoder;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.gaume.affectation.model.CollegeAnnuel;
-import org.gaume.affectation.model.Lycee;
-import org.gaume.affectation.model.LyceeAnnuel;
-import org.gaume.affectation.model.SecteurAnnuel;
+import org.gaume.affectation.model.*;
 import org.gaume.affectation.repo.*;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.gaume.opendata.affelnet75.AffelnetSecteur;
+import org.gaume.opendata.arcgis.ArcgisClient;
+import org.gaume.opendata.arcgis.FeaturesItem;
+import org.gaume.opendata.arcgis.SecteursAffelnet;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 @Service
 @Slf4j
-public class SecteurAnnuelService {
+@RequiredArgsConstructor
+public class SecteurAnnuelService extends BaseService {
 
-    private static final String whereTemplate = "secteur<>'Tête' and Nom_tete='%s'";
+    private static final String whereTemplate = "secteur<>'Tête' and UAI='%s'";
 
-    @Autowired
-    private SecteurAnnuelRepository secteurAnnuelRepository;
+    private final SecteurAnnuelRepository secteurAnnuelRepository;
 
-    @Autowired
-    private CollegeRepository collegeRepository;
+    private final CollegeRepository collegeRepository;
 
-    @Autowired
-    private CollegeAnnuelRepository collegeAnnuelRepository;
+    private final CollegeAnnuelRepository collegeAnnuelRepository;
 
-    @Autowired
-    private LyceeRepository lyceeRepository;
+    private final LyceeRepository lyceeRepository;
 
-    @Autowired
-    private LyceeAnnuelRepository lyceeAnnuelRepository;
+    private final LyceeAnnuelRepository lyceeAnnuelRepository;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    @Transactional
+    public void importSecteursByAnnee(int annee) {
+        try {
+            List<AffelnetSecteur> secteurs = affelnetClient.fetchAffelnetSecteurs(annee);
+            if (secteurs != null) {
+                secteurs.forEach(secteur -> {
+                    Optional<SecteurAnnuel> optionalSecteurAnnuel = findSecteurAnnuel(
+                            secteur.collegeId(),
+                            secteur.lyceeId(),
+                            secteur.annee());
+                    if (optionalSecteurAnnuel.isPresent()) {
+                        SecteurAnnuel secteurAnnuel = optionalSecteurAnnuel.get();
+                        secteurAnnuel.setSecteur(secteur.secteur());
+                        secteurAnnuelRepository.save(secteurAnnuel);
+                    } else {
+                        log.error("secteur avec etablissement inconnu : {}", secteur);
+                    }
+                });
+            } else {
+                log.error("Pas de secteurs en {}", annee);
+            }
+
+        } catch (Exception e) {
+            log.error("Pas de secteurs en {}", annee);
+        }
+    }
 
     public int[] evaluerLyceesAccessibles(int annee, int bonus, float score) {
         List<CollegeAnnuel> collegeAnnuels = collegeAnnuelRepository.findByAnneeAndIpsBonus(annee, bonus);
@@ -62,64 +85,80 @@ public class SecteurAnnuelService {
             }
             if (lyceeAccessibles > 5) {
                 log.error("erreur {} : {}", collegeAnnuel.getCollege().getNom(), lyceeAccessibles);
-            }
-            else {
+            } else {
                 distribution[lyceeAccessibles] = distribution[lyceeAccessibles] + 1;
             }
         }
         return distribution;
     }
+
+    private Optional<SecteurAnnuel> findSecteurAnnuel(String collegeId, String lyceeId, int annee) {
+        Optional<Lycee> lyceeOptional = lyceeRepository.findById(lyceeId);
+        Optional<College> collegeOptional = collegeRepository.findById(collegeId);
+        if (lyceeOptional.isPresent() && collegeOptional.isPresent()) {
+            Optional<SecteurAnnuel> optionalSecteurAnnuel = secteurAnnuelRepository.findByCollegeAndLyceeAndAnnee(
+                    collegeOptional.get(),
+                    lyceeOptional.get(),
+                    annee);
+            if (optionalSecteurAnnuel.isEmpty()) {
+                optionalSecteurAnnuel = Optional.of(new SecteurAnnuel(
+                        collegeOptional.get(),
+                        lyceeOptional.get(),
+                        annee));
+            }
+            return optionalSecteurAnnuel;
+        }
+        return Optional.empty();
+    }
+
     @Transactional
-    public void importSecteurs() {
-        objectMapper.configure(
-                DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        /* try {
+    public void importSecteursArcgis(int annee) {
+        try {
             ArcgisClient secteurResource = Feign.builder()
+                    .encoder(new JacksonEncoder())
+                    .decoder(new JacksonDecoder())
                     .target(ArcgisClient.class, "https://services9.arcgis.com");
-            //Iterable<College> colleges = collegeRepository.findAll();
-            List<College> colleges = new ArrayList<>();
-            Optional<College> college1 = collegeRepository.findById("0750484U");
-            colleges.add(college1.get());
-            for (College college: colleges) {
-                log.info("traitement adresse : {}", college.getNom());
-                String where = String.format(whereTemplate, college.getNom());
-                String response = secteurResource.fetchSecteursAffelnet(where);
-                String reponse = response.replaceAll("UAI", "lyceeId");
-                Response rep = objectMapper.readValue(reponse, Response.class);
-                //log.info(rep.toString());
-                List<FeaturesItem> items = rep.getFeatures();
+
+            Iterable<Lycee> lycees = lyceeRepository.findAll();
+            lycees.forEach(lycee -> {
+                String where = String.format(whereTemplate, lycee.getId());
+                SecteursAffelnet secteurList = secteurResource.fetchSecteursAffelnet(where);
+                List<FeaturesItem> items = secteurList.features();
                 if (items.isEmpty()) {
-                    log.error("adresse absent : {} {}", college.getId(), college.getNom());
-                }
-                else {
+                    log.error("secteur absent : {} {}", lycee.getId(), lycee.getNom());
+                } else {
                     //log.info("adresse present : " + adresse.getNom());
-                    for(FeaturesItem item : items) {
-                        int secteur = Integer.parseInt(item.getAttributes().getSecteur());
-                        String lyceeId = item.getAttributes().getLyceeId();
-                        Optional<Lycee> lyceeOptional = lyceeRepository.findById(lyceeId);
-                        if (lyceeOptional.isPresent()) {
-                            Lycee lycee = lyceeOptional.get();
-                            //log.info("lycee present : " + lycee);
-                            SecteurAnnuel secteurAnnuel = new SecteurAnnuel();
-                            secteurAnnuel.setAnnee(2022);
-                            secteurAnnuel.setCollege(college);
-                            secteurAnnuel.setSecteur(secteur);
-                            secteurAnnuel.setLycee(lycee);
-                            //log.info("saving arcgis {}", secteurAnnuel);
-                            secteurAnnuelRepository.save(secteurAnnuel);
-                        }
-                        else {
-                            log.error("lycee absent : " + lyceeId);
+                    for (FeaturesItem item : items) {
+                        int secteur = Integer.parseInt(item.attributes().secteur());
+                        Optional<College> collegeOptional = collegeRepository.findByNomAffelnet(item.attributes().nomCollege());
+                        if (collegeOptional.isPresent()) {
+                            College college = collegeOptional.get();
+                            Optional<SecteurAnnuel> secteurAnnuelOptional = findSecteurAnnuel(
+                                    college.getId(),
+                                    lycee.getId(),
+                                    annee);
+                            if (secteurAnnuelOptional.isPresent()) {
+                                SecteurAnnuel secteurAnnuel = secteurAnnuelOptional.get();
+                                secteurAnnuel.setAnnee(annee);
+                                secteurAnnuel.setCollege(college);
+                                secteurAnnuel.setSecteur(secteur);
+                                secteurAnnuel.setLycee(lycee);
+                                //log.info("saving arcgis {}", secteurAnnuel);
+                                secteurAnnuelRepository.save(secteurAnnuel);
+                            }
+                            else {
+                                log.error("lycee ou college inconnu de la base :{} {}", lycee.getId(), college.getId());
+                            }
+                        } else {
+                            log.error("college absent : " + item.attributes().nomCollege());
                         }
                     }
                 }
-                log.info("traitement adresse : {} termine", college.getNom());
-
-            }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        } */
-
+            });
+        }
+        catch (Exception e) {
+            log.error("Exception : ", e);
+        }
     }
 
 }

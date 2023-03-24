@@ -7,6 +7,9 @@ public record BrevetFields(
         @JsonProperty("numero_d_etablissement")
         String identifiantEtablissement,
 
+        @JsonProperty("patronyme")
+        String patronyme,
+
         @JsonProperty("session")
         String annee,
 

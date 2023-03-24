@@ -10,12 +10,15 @@ import java.util.List;
 @FeignClient(value = "affelnet75", url = "https://affelnet75.web.app/api")
 public interface AffelnetClient {
 
-    @RequestLine("GET /colleges/{annee}/ips.json")
+    @RequestLine("GET /colleges/colleges_{annee}.json")
     @Headers("Content-Type: application/json")
-    List<BonusIPSItem> fetchBonusIPS(@Param int annee);
+    List<AffelnetCollege> fetchAffelnetColleges(@Param int annee);
 
-    @RequestLine("GET /lycees/{annee}/seuils.json")
+    @RequestLine("GET /lycees/lycees_{annee}.json")
     @Headers("Content-Type: application/json")
-    BonusIPS fetchSeuils(@Param int annee);
+    List<AffelnetLycee> fetchAffelnetLycees(@Param int annee);
 
+    @RequestLine("GET /secteurs/secteurs_{annee}.json")
+    @Headers("Content-Type: application/json")
+    List<AffelnetSecteur> fetchAffelnetSecteurs(@Param int annee);
 }

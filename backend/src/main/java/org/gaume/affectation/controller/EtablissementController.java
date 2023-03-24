@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController()
 @RequiredArgsConstructor
 @Slf4j
-@RequestMapping("etablissements")
+@RequestMapping(value ="etablissements", produces = "application/json")
 public class EtablissementController {
 
     private final EtablissementService etablissementService;

@@ -2,7 +2,10 @@ package org.gaume.opendata.affelnet75;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public record BonusIPSItem(
+public record AffelnetSecteur(
+
+    @JsonProperty("secteur")
+    Integer secteur,
 
     @JsonProperty("college_id")
     String collegeId,
@@ -10,10 +13,7 @@ public record BonusIPSItem(
     @JsonProperty("annee")
     Integer annee,
 
-    @JsonProperty("ips_bonus")
-    Integer ipsBonus,
-
-    @JsonProperty("ips_moyen")
-    Float ipsMoyen
+    @JsonProperty("lycee_id")
+    String lyceeId
 ) {
 }

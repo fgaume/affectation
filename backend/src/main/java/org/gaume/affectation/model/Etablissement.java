@@ -48,4 +48,8 @@ public class Etablissement {
     @Column(name = "coordonnee_y")
     private Float coordonneeY;
 
+    @Column(length = 64)
+    @Size(max = 64)
+    private String nomAffelnet;
+
 }

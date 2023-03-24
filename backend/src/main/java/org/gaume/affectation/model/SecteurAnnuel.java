@@ -4,6 +4,9 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.gaume.affectation.controller.SecteurController;
+
+import javax.validation.constraints.NotNull;
 
 @Entity
 @Data
@@ -16,13 +19,21 @@ public class SecteurAnnuel {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Integer annee = 2022;
+    @NotNull
+    private Integer annee;
 
-    private Integer secteur = 1;
+    @NotNull
+    private Integer secteur = 0;
 
     @ManyToOne
     private College college;
 
     @ManyToOne
     private Lycee lycee;
+
+    public SecteurAnnuel(College college, Lycee lycee, int annee) {
+        this.college = college;
+        this.lycee = lycee;
+        this.annee = annee;
+    }
 }

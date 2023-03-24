@@ -6,6 +6,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import javax.validation.constraints.NotNull;
+
 @Entity
 @Data
 @Builder
@@ -21,6 +23,7 @@ public class CollegeAnnuel {
     @ManyToOne
     private College college;
 
+    @NotNull
     private Integer annee = 2022;
 
     private Float ipsMoyen;
@@ -43,7 +46,12 @@ public class CollegeAnnuel {
 
     private Float dnbTauxReussite = 0f;
 
-    public void updateFrom(CollegeAnnuel collegeAnnuel) {
+    public CollegeAnnuel(College college, int annee) {
+        this.college = college;
+        this.annee = annee;
+    }
+
+    /* public void updateFrom(CollegeAnnuel collegeAnnuel) {
         if (collegeAnnuel.ipsMoyen != null)
             this.ipsMoyen = collegeAnnuel.ipsMoyen;
         if (collegeAnnuel.ipsEcartType != null)
@@ -66,6 +74,6 @@ public class CollegeAnnuel {
             this.dnbAdmisTresBien = collegeAnnuel.dnbAdmisTresBien;
         if (collegeAnnuel.dnbTauxReussite != null)
             this.dnbTauxReussite = collegeAnnuel.dnbTauxReussite;
-    }
+    } */
 
 }

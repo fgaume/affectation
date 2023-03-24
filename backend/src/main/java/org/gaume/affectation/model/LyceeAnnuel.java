@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import javax.validation.constraints.NotNull;
+
 @Entity
 @Data
 @AllArgsConstructor
@@ -20,12 +22,18 @@ public class LyceeAnnuel {
     @ManyToOne
     private Lycee lycee;
 
-    private Integer annee = 2022;
+    @NotNull
+    private Integer annee;
 
-    private Integer effectif = 0;
+    private Integer capacite = 0;
 
-    private Float ips = 0f;
+    private Float ipsMoyen = 0f;
 
     private Float scoreAdmission = 0f;
+
+    public LyceeAnnuel(Lycee lycee, int annee) {
+        this.lycee = lycee;
+        this.annee = annee;
+    }
 
 }

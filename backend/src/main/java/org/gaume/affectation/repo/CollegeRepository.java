@@ -6,6 +6,5 @@ import org.springframework.data.repository.CrudRepository;
 import java.util.Optional;
 
 public interface CollegeRepository extends CrudRepository<College, String> {
-    Optional<College> findByNom(String name);
-    //College findByUai(String uai);
+    Optional<College> findByNomAffelnet(String name);
 }

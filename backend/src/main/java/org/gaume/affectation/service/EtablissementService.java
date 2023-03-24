@@ -17,11 +17,7 @@ import java.util.EnumSet;
 
 @Service
 @Slf4j
-public class EtablissementService {
-    private final OpenDataClient openDataClient = Feign.builder()
-            .encoder(new JacksonEncoder())
-            .decoder(new JacksonDecoder())
-            .target(OpenDataClient.class, "https://data.education.gouv.fr/api/records/1.0/search");
+public class EtablissementService extends BaseService {
 
     private final EtablissementRepository etablissementRepository;
 
